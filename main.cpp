@@ -27,10 +27,11 @@ bool exitState = false, allowNotification = false;
 
 string randomizer(int length);
 void minerThread(Miner* miner);
+void menu(Miner *array[]);
 
 int main()
 {
-    difficulty = hard+1;
+    difficulty = easy+1;
     rng.seed(chrono::steady_clock::now().time_since_epoch().count());
     Miner* minerArray[MINER_COUNT];
     Block* firstBlock = new Block(randomizer(STRING_SIZE), nullptr);
@@ -48,56 +49,27 @@ int main()
         }
     }
 
-    string input;
     while(!exitState)
     {
-        std::cout << "Welcome to simulation\n";
-        std::cout << "(a) Scoreboard\n";
-        std::cout << "(b) Toggle notification\n";
-        std::cout << "(c) Exit\n";
-        std::cin >> input;
-        if(input[0] == 'a')
-        {
-            for(unsigned int i = 0; i < MINER_COUNT - 1; i++)
-            {
-                int index = i;
-                Miner* max = minerArray[i];
-                for(unsigned int j = i+1; j < MINER_COUNT; j++)
-                {
-                    if(minerArray[j]->getOwnedToken() < max->getOwnedToken())
-                    {
-                        index = j;
-                        max = minerArray[j];
-                    }
-                }
-                minerArray[index] = minerArray[i];
-                minerArray[i] = max;
-            }
-            for(int i = 0; i < MINER_COUNT; i++)
-            {
-                std::cout << "Miner " << std::setw(3) << std::setfill(' ') << minerArray[i]->getMyId() << ": I have " << std::setw(3) << std::setfill(' ') << minerArray[i]->getOwnedThread() << " threads and " << std::setw(3) << std::setfill(' ') << minerArray[i]->getOwnedToken() << " token(s)\n";
-            }
-        }
-        else if(input[0] == 'b')
-        {
-            allowNotification = !allowNotification;
-            system("CLS");
-        }
-        else if(input[0] == 'c')
-        {
-            exitState = true;
-        }
-        else
-        {
-            std::cout << "Invalid input\n";
-        }
-        input.clear();
-        cin.clear();
+        menu(minerArray);
     }
 
     for(int i = 0; i < (int)threads.size(); i++)
     {
         threads[i]->join();
+        delete threads[i];
+    }
+
+    while(firstBlock != nullptr)
+    {
+        Block* previousBlock = lastBlock->getPreviousBlock();
+        delete lastBlock;
+        lastBlock = previousBlock;
+    }
+
+    for(int i = 0; i < MINER_COUNT; i++)
+    {
+        delete minerArray[i];
     }
 
     delete firstBlock;
@@ -175,4 +147,50 @@ void minerThread(Miner *miner)
         }
         sem_post(&nextMiner);
     }
+}
+
+void menu(Miner* minerArray[])
+{
+    string input;
+    std::cout << "Welcome to simulation\n";
+    std::cout << "(a) Scoreboard\n";
+    std::cout << "(b) Toggle notification " << allowNotification << '\n';
+    std::cout << "(c) Exit\n";
+    std::cin >> input;
+    if(input[0] == 'a')
+    {
+        for(unsigned int i = 0; i < MINER_COUNT - 1; i++)
+        {
+            int index = i;
+            Miner* max = minerArray[i];
+            for(unsigned int j = i+1; j < MINER_COUNT; j++)
+            {
+                if(minerArray[j]->getOwnedToken() < max->getOwnedToken())
+                {
+                    index = j;
+                    max = minerArray[j];
+                }
+            }
+            minerArray[index] = minerArray[i];
+            minerArray[i] = max;
+        }
+        for(int i = 0; i < MINER_COUNT; i++)
+        {
+            std::cout << "Miner " << std::setw(3) << std::setfill(' ') << minerArray[i]->getMyId() << ": I have " << std::setw(3) << std::setfill(' ') << minerArray[i]->getOwnedThread() << " threads and " << std::setw(3) << std::setfill(' ') << minerArray[i]->getOwnedToken() << " token(s)\n";
+        }
+    }
+    else if(input[0] == 'b')
+    {
+        allowNotification = !allowNotification;
+        system("CLS");
+    }
+    else if(input[0] == 'c')
+    {
+        exitState = true;
+    }
+    else
+    {
+        std::cout << "Invalid input\n";
+    }
+    cin.clear();
 }
