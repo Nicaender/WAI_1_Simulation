@@ -48,8 +48,8 @@ int main()
     {
         std::cout << "Welcome to simulation\n";
         std::cout << "(a) Scoreboard\n";
-        std::cout << "(b) Exit\n";
-        std::cout << "(c) Toggle notification\n";
+        std::cout << "(b) Toggle notification\n";
+        std::cout << "(c) Exit\n";
         std::cin >> input;
         if(input[0] == 'a')
         {
@@ -59,7 +59,7 @@ int main()
                 Miner* max = minerArray[i];
                 for(unsigned int j = i+1; j < MINER_COUNT; j++)
                 {
-                    if(minerArray[j]->getOwnedToken() > max->getOwnedToken())
+                    if(minerArray[j]->getOwnedToken() < max->getOwnedToken())
                     {
                         index = j;
                         max = minerArray[j];
@@ -70,17 +70,17 @@ int main()
             }
             for(int i = 0; i < MINER_COUNT; i++)
             {
-                std::cout << "Miner " << std::setw(2) << std::setfill('0') << minerArray[i]->getMyId() << ": I have " << std::setw(2) << std::setfill('0') << minerArray[i]->getOwnedThread() << " threads and " << std::setw(2) << std::setfill('0') << minerArray[i]->getOwnedToken() << " token(s)\n";
+                std::cout << "Miner " << std::setw(3) << std::setfill(' ') << minerArray[i]->getMyId() << ": I have " << std::setw(3) << std::setfill(' ') << minerArray[i]->getOwnedThread() << " threads and " << std::setw(3) << std::setfill(' ') << minerArray[i]->getOwnedToken() << " token(s)\n";
             }
         }
         else if(input[0] == 'b')
         {
-            exitState = true;
+            allowNotification = !allowNotification;
+            system("CLS");
         }
         else if(input[0] == 'c')
         {
-            allowNotification = !allowNotification;
-            system("CLS");
+            exitState = true;
         }
         else
         {
