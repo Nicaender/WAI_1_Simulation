@@ -4,4 +4,10 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
-        main.cpp
+        block.cpp \
+        main.cpp \
+        miner.cpp
+
+HEADERS += \
+    block.h \
+    miner.h
