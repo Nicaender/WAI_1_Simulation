@@ -8,8 +8,9 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <iomanip>
+#include <math.h>
 
-#define STRING_SIZE 4
+#define STRING_SIZE 6
 #define MINER_COUNT 100
 
 enum difficult {easy, medium, hard}; // easy = only numbers, medium = numbers + Capital letter, hard = numbers + alphabets (capital and non capital)
@@ -29,7 +30,7 @@ void minerThread(Miner* miner);
 
 int main()
 {
-    difficulty = medium+1;
+    difficulty = hard+1;
     rng.seed(chrono::steady_clock::now().time_since_epoch().count());
     Miner* minerArray[MINER_COUNT];
     Block* firstBlock = new Block(randomizer(STRING_SIZE), nullptr);
@@ -154,7 +155,15 @@ void minerThread(Miner *miner)
                 msg.unlock();
             }
             myMiner->setOwnedToken(myMiner->getOwnedToken() + 1);
-            Block* newBlock = new Block(randomizer(STRING_SIZE), lastBlock);
+            string newBlockValue;
+            int counter = lastBlock->getValue().size() / 2;
+            while(counter != 0)
+            {
+                newBlockValue += lastBlock->getValue()[lastBlock->getValue().size() - counter];
+                counter--;
+            }
+            newBlockValue += randomizer(STRING_SIZE - newBlockValue.size());
+            Block* newBlock = new Block(newBlockValue, lastBlock);
             lastBlock = newBlock;
             if(allowNotification)
             {
