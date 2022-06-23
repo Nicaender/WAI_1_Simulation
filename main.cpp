@@ -12,6 +12,9 @@
 #define STRING_SIZE 4
 #define MINER_COUNT 100
 
+enum difficult {easy, medium, hard}; // easy = only numbers, medium = numbers + Capital letter, hard = numbers + alphabets (capital and non capital)
+int difficulty;
+
 using namespace std;
 
 Block* lastBlock;
@@ -26,6 +29,7 @@ void minerThread(Miner* miner);
 
 int main()
 {
+    difficulty = medium+1;
     rng.seed(chrono::steady_clock::now().time_since_epoch().count());
     Miner* minerArray[MINER_COUNT];
     Block* firstBlock = new Block(randomizer(STRING_SIZE), nullptr);
@@ -105,7 +109,7 @@ string randomizer(int length)
     int number = 0;
     while((int)tmp.size() != length)
     {
-        number = rng() % 1;
+        number = rng() % difficulty;
         if(number == 0)
         {
             tmp += (char(48 + (rng() % 10)));
