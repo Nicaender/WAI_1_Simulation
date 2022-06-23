@@ -72,7 +72,6 @@ int main()
         delete minerArray[i];
     }
 
-    delete firstBlock;
     return 0;
 }
 
