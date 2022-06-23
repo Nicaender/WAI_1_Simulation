@@ -7,22 +7,22 @@
 #include <vector>
 #include <unistd.h>
 #include <semaphore.h>
+#include <iomanip>
 
-#define STRING_SIZE 1
-#define MINER_COUNT 10
+#define STRING_SIZE 4
+#define MINER_COUNT 100
 
 using namespace std;
 
 Block* lastBlock;
 mt19937 rng;
 mutex found, msg;
-sem_t permissionStart, requestStart, createdMiner;
-bool allowedStart = false;
+sem_t nextMiner;
 vector <thread*> threads;
+bool exitState = false, allowNotification = false;
 
 string randomizer(int length);
 void minerThread(Miner* miner);
-void systemFunc();
 
 int main()
 {
@@ -30,16 +30,12 @@ int main()
     Miner* minerArray[MINER_COUNT];
     Block* firstBlock = new Block(randomizer(STRING_SIZE), nullptr);
     lastBlock = firstBlock;
-    sem_init(&permissionStart, 0, 0);
-    sem_init(&requestStart, 0, 0);
-    sem_init(&createdMiner, 0, 0);
+    sem_init(&nextMiner, 0, 1);
 
-    thread system(systemFunc);
-
-    for(int i = 0; i < MINER_COUNT; i++)
+    for(int i = 0; i < MINER_COUNT; i++) // Creating a miner with randomized threads, and then runs the thread
     {
         minerArray[i] = new Miner((rng() % 10) + 1, 0);
-        std::cout << "Creating " << minerArray[i]->getOwnedThread() << " thread for miner " << minerArray[i]->getMyId() << '\n';
+//        std::cout << "Creating " << minerArray[i]->getOwnedThread() << " thread for miner " << minerArray[i]->getMyId() << '\n';
         for(int j = 0; j < minerArray[i]->getOwnedThread(); j++)
         {
             thread* tmp = new thread(minerThread, minerArray[i]);
@@ -47,7 +43,52 @@ int main()
         }
     }
 
-    sem_post_multiple(&createdMiner, threads.size());
+    string input;
+    while(!exitState)
+    {
+        std::cout << "Welcome to simulation\n";
+        std::cout << "(a) Scoreboard\n";
+        std::cout << "(b) Exit\n";
+        std::cout << "(c) Toggle notification\n";
+        std::cin >> input;
+        if(input[0] == 'a')
+        {
+            for(unsigned int i = 0; i < MINER_COUNT - 1; i++)
+            {
+                int index = i;
+                Miner* max = minerArray[i];
+                for(unsigned int j = i+1; j < MINER_COUNT; j++)
+                {
+                    if(minerArray[j]->getOwnedToken() > max->getOwnedToken())
+                    {
+                        index = j;
+                        max = minerArray[j];
+                    }
+                }
+                minerArray[index] = minerArray[i];
+                minerArray[i] = max;
+            }
+            for(int i = 0; i < MINER_COUNT; i++)
+            {
+                std::cout << "Miner " << std::setw(2) << std::setfill('0') << minerArray[i]->getMyId() << ": I have " << std::setw(2) << std::setfill('0') << minerArray[i]->getOwnedThread() << " threads and " << std::setw(2) << std::setfill('0') << minerArray[i]->getOwnedToken() << " token(s)\n";
+            }
+        }
+        else if(input[0] == 'b')
+        {
+            exitState = true;
+        }
+        else if(input[0] == 'c')
+        {
+            allowNotification = !allowNotification;
+            system("CLS");
+        }
+        else
+        {
+            std::cout << "Invalid input\n";
+        }
+        input.clear();
+        cin.clear();
+    }
 
     for(int i = 0; i < (int)threads.size(); i++)
     {
@@ -64,7 +105,7 @@ string randomizer(int length)
     int number = 0;
     while((int)tmp.size() != length)
     {
-        number = rng() % 3;
+        number = rng() % 1;
         if(number == 0)
         {
             tmp += (char(48 + (rng() % 10)));
@@ -85,50 +126,40 @@ string randomizer(int length)
 void minerThread(Miner *miner)
 {
     Miner* myMiner = miner;
-    sem_wait(&createdMiner);
     while(true)
     {
-        if(!allowedStart)
+        sem_wait(&nextMiner);
+        if(exitState)
         {
-            sem_post(&requestStart);
-            sem_wait(&permissionStart);
+            sem_post(&nextMiner);
+            return;
         }
         string answer = randomizer(STRING_SIZE);
-        usleep(1000);
-        msg.lock();
-        std::cout << "Miner " << myMiner->getMyId() << ": I am trying with " << answer << '\n';
-        msg.unlock();
+//        msg.lock();
+//        std::cout << "Miner " << myMiner->getMyId() << ": I am trying with " << answer << '\n';
+//        msg.unlock();
         if(lastBlock->getValue() == answer)
         {
             found.lock();
-            allowedStart = false;
             if(lastBlock->getValue() != answer)
                 continue;
-            msg.lock();
-            std::cout << "Miner " << myMiner->getMyId() << ": I have found the answer, it was " << answer << " = " << lastBlock->getValue() << '\n';
-            msg.unlock();
+            if(allowNotification)
+            {
+                msg.lock();
+                std::cout << "Miner " << myMiner->getMyId() << ": I have found the answer, it was " << answer << " = " << lastBlock->getValue() << '\n';
+                msg.unlock();
+            }
             myMiner->setOwnedToken(myMiner->getOwnedToken() + 1);
             Block* newBlock = new Block(randomizer(STRING_SIZE), lastBlock);
             lastBlock = newBlock;
-            msg.lock();
-            std::cout << "Miner " << myMiner->getMyId() << ": The new block value is " << lastBlock->getValue() << '\n';
-            msg.unlock();
+            if(allowNotification)
+            {
+                msg.lock();
+                std::cout << "Miner " << myMiner->getMyId() << ": The new block value is " << lastBlock->getValue() << '\n';
+                msg.unlock();
+            }
             found.unlock();
         }
-    }
-}
-
-void systemFunc()
-{
-    int counter = 0;
-    while(true)
-    {
-        sem_wait(&requestStart);
-        counter++;
-        if(counter == (int)threads.size())
-        {
-            counter = 0;
-            sem_post_multiple(&permissionStart, (int)threads.size());
-        }
+        sem_post(&nextMiner);
     }
 }
